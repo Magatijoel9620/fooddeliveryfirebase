@@ -594,17 +594,8 @@ class Restaurant extends ChangeNotifier {
     });
 
     //if items alreaedy exists
-    if (cartItem != null) {
-      cartItem.quantity++;
-    } else {
-      _cart.add(
-        CartItem(
-          food: food,
-          selectedAddons: selectedAddons,
-        ),
-      );
-    }
-    notifyListeners();
+    cartItem?.quantity++;
+      notifyListeners();
   }
 
   //remove
