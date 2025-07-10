@@ -47,10 +47,10 @@ class _FoodPageState extends State<FoodPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: Container(
-          
+
           margin: const EdgeInsets.only(left: 25),
           decoration: const BoxDecoration(
-            color: Colors.grey,
+            color: Colors.transparent,
             shape: BoxShape.circle,
           ),
           child: IconButton(
