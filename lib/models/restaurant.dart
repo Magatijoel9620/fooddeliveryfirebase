@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:food_delivery_firebase/models/food.dart';
 import 'package:intl/intl.dart';
@@ -580,36 +581,118 @@ class Restaurant extends ChangeNotifier {
 
   // user cart
   final List<CartItem> _cart = [];
-
-  // add to cart
+// add to cart
   void addToCart(Food food, List<Addon> selectedAddons) {
-    //see if there is a cartitem already with the same food and selected addons
+    print("Restaurant: addToCart called for ${food.name}.");
+    if (selectedAddons.isNotEmpty) {
+      print("Restaurant: With addons: ${selectedAddons.map((a) => a.name).join(', ')}");
+    } else {
+      print("Restaurant: With no addons.");
+    }
+
+    print("Restaurant: _cart size BEFORE modification: ${_cart.length}");
+
+    // See if there is a cart item already with the same food and selected addons
     CartItem? cartItem = _cart.firstWhereOrNull((item) {
-      //check if food same
       bool isSameFood = item.food == food;
-//check if addons same
       bool isSameAddons =
-          const ListEquality().equals(item.selectedAddons, selectedAddons);
+      const ListEquality().equals(item.selectedAddons, selectedAddons);
       return isSameFood && isSameAddons;
     });
 
-    //if items alreaedy exists
-    cartItem?.quantity++;
-      notifyListeners();
+    // If item already exists in cart, increment quantity
+    if (cartItem != null) {
+      print("Restaurant: Item already exists. Incrementing quantity for ${cartItem.food.name}.");
+      cartItem.quantity++;
+    }
+    // Else (if it's a new item for the cart), add it to the cart
+    else {
+      print("Restaurant: New item. Adding ${food.name} to cart.");
+      // Assuming your CartItem constructor looks something like:
+      // CartItem({required this.food, required this.selectedAddons, this.quantity = 1})
+      _cart.add(
+        CartItem(
+          food: food,
+          selectedAddons: selectedAddons,
+          quantity: 1, // Initial quantity for a new item
+        ),
+      );
+    }
+
+    print("Restaurant: _cart size AFTER modification: ${_cart.length}");
+    if (_cart.isNotEmpty) {
+      var lastItemFoodName = _cart.last.food.name; // Adjust if your CartItem structure is different
+      print("Restaurant: Last item in _cart (food name): $lastItemFoodName, quantity: ${_cart.last.quantity}");
+    }
+
+    notifyListeners();
+    print("Restaurant: notifyListeners called.");
   }
 
+
   //remove
-  void removeFromCart(CartItem cartItem) {
+  void removeFromCart(CartItem cartItemToRemove) {
+    // The `_cart.remove()` method iterates through the list and removes the first
+    // element that is equal to `cartItemToRemove` according to the `==` operator.
+    final bool removed = _cart.remove(cartItemToRemove);
+
+    if (removed) {
+      if (kDebugMode) {
+        print("Restaurant: Slidable delete removed ${cartItemToRemove.food.name} (Quantity: ${cartItemToRemove.quantity}) completely.");
+      }
+      notifyListeners(); // Crucial: Update all listening widgets
+    } else {
+      // This case should ideally not happen if the cartItemToRemove came directly from the cart list UI.
+      if (kDebugMode) {
+        print("Restaurant: Slidable delete - Item ${cartItemToRemove.food.name} not found in cart.");
+      }
+      // You might still call notifyListeners() or handle this as an error if appropriate.
+    }
+  }
+
+  // If you still need a way to decrement quantity (e.g., from a '-' button in MyCartTile),
+  // you should have a separate method for that:
+  void decrementItemQuantity(CartItem cartItem) {
+    // Find the item in the cart. Robust finding is key here.
+    // Using indexOf relies on `CartItem`'s `==`
     int cartIndex = _cart.indexOf(cartItem);
+
+    // Alternative robust finding (if CartItem has a unique 'id'):
+    // int cartIndex = _cart.indexWhere((item) => item.id == cartItem.id);
+
     if (cartIndex != -1) {
       if (_cart[cartIndex].quantity > 1) {
         _cart[cartIndex].quantity--;
+        if (kDebugMode) {
+          print("Restaurant: Decremented quantity of ${_cart[cartIndex].food.name} to ${_cart[cartIndex].quantity}");
+        }
+        notifyListeners();
       } else {
-        _cart.removeAt(cartIndex);
+        // If quantity is 1 and user presses '-', remove it completely.
+        // This makes the minus button behave like a delete at quantity 1.
+        if (kDebugMode) {
+          print("Restaurant: Quantity of ${_cart[cartIndex].food.name} is 1, removing via decrement.");
+        }
+        _cart.removeAt(cartIndex); // Directly remove since we found its index
+        notifyListeners();
+      }
+    } else {
+      if (kDebugMode) {
+        print("Restaurant: decrementItemQuantity - Item ${cartItem.food.name} not found.");
       }
     }
-    notifyListeners();
   }
+  // void removeFromCart(CartItem cartItem) {
+  //   int cartIndex = _cart.indexOf(cartItem);
+  //   if (cartIndex != -1) {
+  //     if (_cart[cartIndex].quantity > 1) {
+  //       _cart[cartIndex].quantity--;
+  //     } else {
+  //       _cart.removeAt(cartIndex);
+  //     }
+  //   }
+  //   notifyListeners();
+  // }
 
   //total price
   double getTotalPrice() {

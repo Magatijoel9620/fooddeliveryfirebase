@@ -19,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  //ignore this login method below, it is not used
   // void login() {
   //   Navigator.push(
   //     context,

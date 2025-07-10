@@ -2,109 +2,144 @@ import 'package:flutter/material.dart';
 import 'package:food_delivery_firebase/components/my_quantity_selector.dart';
 import 'package:food_delivery_firebase/models/restaurant.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // For currency formatting
 
 import '../models/cart_item.dart';
 
 class MyCartTile extends StatelessWidget {
   final CartItem cartItem;
+
   const MyCartTile({super.key, required this.cartItem});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<Restaurant>(
-      builder: (context, restaurant, child) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondary,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    // Helper for currency formatting
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'en_US', // Adjust to your locale
+      symbol: '\$', // Adjust symbol
+    );
+
+    return Card(
+      // Using Card for better elevation and a defined boundary
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias, // Ensures content respects card's rounded corners
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  //food image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      cartItem.food.imagePath,
-                      height: 100,
-                      width: 100,
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Food Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.asset(
+                    cartItem.food.imagePath,
+                    height: 80, // Slightly reduced for a more compact look
+                    width: 80,
+                    fit: BoxFit.cover,
                   ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  //name and price
-                  Column(
+                ),
+                const SizedBox(width: 12),
+
+                // Name, Price, Quantity Selector
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      //food and price
-                      Text(cartItem.food.name),
-                      //foodPrice
-                      Text('\$${cartItem.food.price}'),
-
-                      const SizedBox(
-                        height: 10,
+                      Text(
+                        cartItem.food.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-
-                      //increment or decrement quantity
+                      const SizedBox(height: 4),
+                      Text(
+                        currencyFormatter.format(cartItem.food.price),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       QuantitySelector(
                         quantity: cartItem.quantity,
                         food: cartItem.food,
                         onDecrement: () {
-                          restaurant.removeFromCart(cartItem);
+                          // Consider adding a check: if quantity is 1 and decrement is pressed,
+                          // maybe confirm removal or just remove directly.
+                          Provider.of<Restaurant>(context, listen: false)
+                              .removeFromCart(cartItem);
                         },
                         onIncrement: () {
-                          restaurant.addToCart(
-                              cartItem.food, cartItem.selectedAddons);
+                          Provider.of<Restaurant>(context, listen: false)
+                              .addToCart(cartItem.food, cartItem.selectedAddons);
                         },
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+
+                // Total Price for this item (Food price + Addons) * Quantity
+                // This is a good place to show the subtotal for THIS cart item
+                Text(
+                  currencyFormatter.format(cartItem.totalPrice), // Assuming CartItem has a totalPrice getter
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              height: cartItem.selectedAddons.isEmpty ? 0 : 60,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(left: 10, bottom: 10, right: 10),
-                children: cartItem.selectedAddons
-                    .map(
-                      (addon) => Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: FilterChip(
-                          label: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(addon.name),
-                              Text(
-                                '(\$${addon.price})',
-                                style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
-                              ),
-                            ],
-                          ),
-                          shape: StadiumBorder(
-                              side: BorderSide(
-                                  color:
-                                      Theme.of(context).colorScheme.primary)),
-                          onSelected: (value) {},
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
-                          labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.inversePrimary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
+
+            // Addons Display (if any)
+            if (cartItem.selectedAddons.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Divider(color: colorScheme.outlineVariant, height: 1),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0), // Align with text content
+                child: Text(
+                  "Add-ons:",
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            )
+              const SizedBox(height: 6),
+              Wrap( // Use Wrap for addons to flow to the next line if space is limited
+                spacing: 8.0, // Horizontal space between chips
+                runSpacing: 4.0, // Vertical space between lines of chips
+                children: cartItem.selectedAddons.map((addon) {
+                  return Chip(
+                    label: Text(
+                      '${addon.name} (+${currencyFormatter.format(addon.price)})',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSecondaryContainer, // Ensure good contrast
+                      ),
+                    ),
+                    backgroundColor: colorScheme.secondaryContainer,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduces tap target size
+                    shape: StadiumBorder(
+                      // Optional: remove side border or use a more subtle one
+                      // side: BorderSide(color: colorScheme.outline.withOpacity(0.5))
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
